@@ -1,0 +1,180 @@
+---
+title: "Introduction to Data Science - Homework"
+author: "Mislav Spajić"
+date: "5/7/2020"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+![](https://repozitorij.algebra.hr/sites/repozitorij.algebra.hr/files/algebra_subbrand_vu_color-black_h_1.png)
+
+## 1. Importing needed libraries and data
+```{r echo = T, results = 'hide',message=FALSE}
+#Needed libraries
+library(httr)
+library(tidyverse)
+library(readxl)
+#Importing data
+url <- "https://github.com/MySlav/Introduction_to_DS_Homework/raw/master/Data_for_labs_v1.xlsx"
+GET(url, write_disk(tf <- tempfile(fileext = ".xlsx")))
+excel_sheets(path = tf)
+names <- excel_sheets(path = tf)
+#data is list of data frames, each sheet in separate df
+data <- lapply(names, function(x) read_excel(path = tf, sheet = x))
+```
+## 2. Frequency Distribution Tables
+
+
+
+### 2.1. Discrete & Categorical Variables
+```{r}
+#Absolute Frequency
+abs<-table(data[[1]])
+abs
+```
+
+```{r}
+#Relative proportion
+rel<-prop.table(abs)
+rel
+#Percentage frequencies
+perc<-rel*100
+perc
+#Cumulatives
+cumsum(rel)
+cumsum(perc)
+```
+
+### 2.2. Continuous Variables
+
+For continuous variables we should create some intervals or classes
+I will use famous iris dataset, it's integrated in R
+```{r pressure, echo=FALSE}
+#Lets check it out
+head(iris)
+```
+```{r}
+#I will use sepal length for this example
+dat<-iris$Sepal.Length
+
+#Number of bins = 1 + 3.3 * log n
+num<-1+3.3*log(length(dat))
+num<-num+0.5 # Rounding
+num<-as.integer(num)
+
+tab<-table(cut(dat, num))
+sort(tab, decreasing=TRUE)
+#Note that I again used table, but argument is nested function cut with calculated number of bins
+```
+### 2.3. Contingency Tables
+Contingency tables or cross tables - sometimes called a two-way frequency table, here data is classified by simultaneous grouping according to two or more variables.
+```{r}
+#I will use the Restaraunt guests data to show how to make cross table
+head(data[[3]])
+```
+```{r}
+mytable <- ftable(data[[3]]$Gender,data[[3]]$`Number of restaurant visit`)
+#First argument will be rows,second will be columns
+#We could have used table function also, but with ftable it looks a bit better
+mytable
+
+```
+## 3. Central Tendency Measures
+```{r}
+#Data I will use for analysis
+head(data[[1]])
+loans<-data[[1]]
+```
+### 3.1. Mean
+```{r}
+#Mean of Loans Number per day
+mean(loans$`Loans number per day Branch 1`)
+```
+### 3.2. Mode
+```{r}
+#There is no built-in function for mode in R
+#We can table the data, sort it and then pick the first name
+names(sort(-table(loans)))[1]
+```
+### 3.3. Median
+```{r}
+median(loans$`Loans number per day Branch 1`)
+```
+### 3.4. Other Measures
+Other measures (useful, but used only in specific situations)
+```{r}
+#Importing just one function from library library::function
+#Geometric mean:
+EnvStats::geoMean(loans$`Loans number per day Branch 1`)
+#Harmonic mean:
+lmomco::harmonic.mean(loans$`Loans number per day Branch 1`)
+#Trimmed mean,using base mean function with trim arg:
+#Example with 20% trim at each end
+mean(loans$`Loans number per day Branch 1`,trim = 0.2)
+```
+## 4. Graphical Views
+
+### 4.1. Histogram
+```{r}
+#Using ggplot2 - from tidyverse collection
+#ggplot is based on "grammar of graphics"
+#Shown on iris sepal length variable
+
+# Basic histogram
+ggplot(iris, aes(x=Sepal.Length)) + geom_histogram(bins =num,fill="red") + labs(title="Iris Sepal Length")
+
+```
+
+### 4.2. Bar Plot
+```{r}
+#Using basic barplot function
+#Shown on restaurant guests gender variable
+barplot(table(data[[3]]$Gender),
+main = "Restaurant guests",
+xlab = "Count",
+ylab = "Gender",
+col = "darkred",
+horiz = TRUE)
+```
+
+### 4.3. Frequency Polygon
+```{r}
+#Using basic plot - shown on Frequency of Loans Number per day
+plot(abs,type = "o", col = "red", xlab = "Loans per day", ylab = "Frequency",
+   main = "Frequency of Loans Number per day",ylim = c(min(abs),max(abs)))
+```
+
+### 4.4. Scatter Diagram
+```{r}
+#Using ggplot2 - shown on iris petal width and length variables
+scatter <- ggplot(data=iris, aes(x = Sepal.Width, y = Sepal.Length)) 
+scatter + geom_point(aes(color=Species, shape=Species)) +
+  xlab("Sepal Width") +  ylab("Sepal Length") +
+  ggtitle("Sepal Width-Length")
+```
+
+### 4.5. Pie Plot
+```{r}
+#Using ggplot2 - shown on restaurant guests gender variable
+dat<-as.data.frame(table(data[[3]]$Gender))
+
+ggplot(dat, aes(x="", y=Freq, fill=Var1)) +
+  geom_bar(stat="identity", width=1, color="white") +
+  coord_polar("y", start=0) +
+  geom_text(aes(label = paste(round(Freq / sum(Freq) * 100, 1), "%")),
+            position = position_stack(vjust = 0.5)) +
+  ggtitle('Restaurant guests by gender')+
+  theme_void() # remove background, grid, numeric labels
+```
+
+### 4.6. Box & Whisker Plot
+```{r}
+#Using basic plot - shown on iris petal width variable
+boxplot(iris$Petal.Width,main="Iris petal width (cm)")
+```
